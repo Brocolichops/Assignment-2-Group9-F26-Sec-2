@@ -1,98 +1,76 @@
-import * as Device from 'expo-device';
-import { Platform, StyleSheet } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { StatusBar } from "expo-status-bar";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 
-import { AnimatedIcon } from '@/components/animated-icon';
-import { HintRow } from '@/components/hint-row';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { WebBadge } from '@/components/web-badge';
-import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
-
-function getDevMenuHint() {
-  if (Platform.OS === 'web') {
-    return <ThemedText type="small">use browser devtools</ThemedText>;
-  }
-  if (Device.isDevice) {
-    return (
-      <ThemedText type="small">
-        shake device or press <ThemedText type="code">m</ThemedText> in terminal
-      </ThemedText>
-    );
-  }
-  const shortcut = Platform.OS === 'android' ? 'cmd+m (or ctrl+m)' : 'cmd+d';
+export default function App(){
   return (
-    <ThemedText type="small">
-      press <ThemedText type="code">{shortcut}</ThemedText>
-    </ThemedText>
-  );
-}
+    <View style={styles.container}>
+      <StatusBar style="light"/>
 
-export default function HomeScreen() {
-  return (
-    <ThemedView style={styles.container}>
-      <SafeAreaView style={styles.safeArea}>
-        <ThemedView style={styles.heroSection}>
-          <AnimatedIcon />
-          <ThemedText type="title" style={styles.title}>
-            Welcome to&nbsp;Expo
-          </ThemedText>
-        </ThemedView>
+      <View style={styles.circleContainer}>
+        <View style={styles.circle}>
+          <Text style={styles.circleRatingText}>96</Text>
+          <Text style={styles.circleText}>Driver Rating</Text>
+        </View>
+      </View>
 
-        <ThemedText type="code" style={styles.code}>
-          get started
-        </ThemedText>
+      <View style={styles.buttonContainer}>
+        <Pressable style={({pressed}) => [styles.button, pressed && styles.buttonPressed]} onPress={() => console.log("Start Button Pressed!")}>
+          <Text style={styles.buttonText}>Start</Text>
+        </Pressable>
+        <Pressable style={({pressed}) => [styles.button, pressed && styles.buttonPressed]} onPress={() => console.log("Stop button pressed!")}>
+          <Text style={styles.buttonText}>Stop</Text>
+        </Pressable>
+      </View>
 
-        <ThemedView type="backgroundElement" style={styles.stepContainer}>
-          <HintRow
-            title="Try editing"
-            hint={<ThemedText type="code">src/app/index.tsx</ThemedText>}
-          />
-          <HintRow title="Dev tools" hint={getDevMenuHint()} />
-          <HintRow
-            title="Fresh start"
-            hint={<ThemedText type="code">npm run reset-project</ThemedText>}
-          />
-        </ThemedView>
 
-        {Platform.OS === 'web' && <WebBadge />}
-      </SafeAreaView>
-    </ThemedView>
-  );
+      </View>
+  )
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'center',
+    flexDirection: 'column',
+    backgroundColor: '#000000',
+    alignItems: "center",
+    justifyContent: "center"
+  },
+  circleContainer: {
+    marginBottom: 40
+  },
+  circle: {
+    width: 350,
+    height: 350,
+    borderRadius: 175,
+    borderWidth: 10,
+    borderColor: "#27F587",
+    
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  circleRatingText: {
+    color: '#27F587',
+    fontWeight: 'bold',
+    fontSize: 50
+  },
+  circleText: {
+    color: '#27F587',
+  },
+  buttonContainer: {
     flexDirection: 'row',
+    justifyContent: 'space-evenly',
+    width: '100%'
   },
-  safeArea: {
-    flex: 1,
-    paddingHorizontal: Spacing.four,
-    alignItems: 'center',
-    gap: Spacing.three,
-    paddingBottom: BottomTabInset + Spacing.three,
-    maxWidth: MaxContentWidth,
+  button: {
+    backgroundColor: '#27B4F5',
+    paddingVertical: 20,
+    paddingHorizontal: 40,
+    borderRadius: 20,
   },
-  heroSection: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    flex: 1,
-    paddingHorizontal: Spacing.four,
-    gap: Spacing.four,
+  buttonPressed:{
+    backgroundColor: '#055E70'
   },
-  title: {
-    textAlign: 'center',
-  },
-  code: {
-    textTransform: 'uppercase',
-  },
-  stepContainer: {
-    gap: Spacing.three,
-    alignSelf: 'stretch',
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.four,
-    borderRadius: Spacing.four,
-  },
-});
+  buttonText: {
+    color: "white"
+  }
+})

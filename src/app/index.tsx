@@ -8,7 +8,7 @@ export default function App(){
 
       <View style={styles.circleContainer}>
         <View style={styles.circle}>
-          <Text style={styles.circleRatingText}>96</Text>
+          <Text style={styles.circleRatingText}>80</Text>
           <Text style={styles.circleText}>Driver Rating</Text>
         </View>
       </View>

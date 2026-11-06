@@ -1,10 +1,45 @@
 import { StatusBar } from "expo-status-bar";
+import * as Location from "expo-location";
+import { useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
-export default function App(){
+export default function App() {
+  const [isStarted, setIsStarted] = useState(false);
+  const [isLocating, setIsLocating] = useState(false);
+
+  const handleToggle = async () => {
+    if (isLocating) {
+      return;
+    }
+
+    const action = isStarted ? "stop" : "start";
+    setIsStarted(!isStarted);
+    setIsLocating(true);
+
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== "granted") {
+        console.warn(`Location permission was not granted; unable to record ${action} coordinates.`);
+        return;
+      }
+
+      const { coords } = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.High,
+      });
+      console.log(`GPS coordinates (${action}):`, {
+        latitude: coords.latitude,
+        longitude: coords.longitude,
+      });
+    } catch (error) {
+      console.error(`Unable to retrieve GPS coordinates on ${action}:`, error);
+    } finally {
+      setIsLocating(false);
+    }
+  };
+
   return (
     <View style={styles.container}>
-      <StatusBar style="light"/>
+      <StatusBar style="light" />
 
       <View style={styles.circleContainer}>
         <View style={styles.circle}>
@@ -14,17 +49,21 @@ export default function App(){
       </View>
 
       <View style={styles.buttonContainer}>
-        <Pressable style={({pressed}) => [styles.button, pressed && styles.buttonPressed]} onPress={() => console.log("Start Button Pressed!")}>
-          <Text style={styles.buttonText}>Start</Text>
-        </Pressable>
-        <Pressable style={({pressed}) => [styles.button, pressed && styles.buttonPressed]} onPress={() => console.log("Stop button pressed!")}>
-          <Text style={styles.buttonText}>Stop</Text>
+        <Pressable
+          accessibilityRole="button"
+          disabled={isLocating}
+          style={({ pressed }) => [
+            styles.button,
+            isStarted && styles.buttonStarted,
+            pressed && styles.buttonPressed,
+          ]}
+          onPress={() => void handleToggle()}
+        >
+          <Text style={styles.buttonText}>{isStarted ? "Stop" : "Start"}</Text>
         </Pressable>
       </View>
-
-
-      </View>
-  )
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({
@@ -57,20 +96,26 @@ const styles = StyleSheet.create({
     color: '#27F587',
   },
   buttonContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-evenly',
-    width: '100%'
+    alignItems: "center",
+    justifyContent: "center",
+    width: "100%",
   },
   button: {
     backgroundColor: '#27B4F5',
     paddingVertical: 20,
     paddingHorizontal: 40,
     borderRadius: 20,
+    width: 180,
+    alignItems: "center",
   },
-  buttonPressed:{
-    backgroundColor: '#055E70'
+  buttonStarted: {
+    backgroundColor: "#E53935",
+  },
+  buttonPressed: {
+    opacity: 0.8,
   },
   buttonText: {
-    color: "white"
+    color: "white",
+    textAlign: "center",
   }
-})
+});

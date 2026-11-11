@@ -16,6 +16,22 @@ This is an [Expo](https://expo.dev) project created with [`create-expo-app`](htt
    npx expo start
    ```
 
+## Supabase setup
+
+The app records one row per driving session in `public.driver_sessions`, including
+the start and stop coordinates. Anonymous authentication keeps the app free of a
+sign-in screen while row-level security limits each installation to its own rows.
+
+1. In the Supabase Dashboard, enable anonymous sign-ins in the Auth settings.
+2. Open the SQL Editor and run [`supabase/schema.sql`](./supabase/schema.sql).
+3. Copy `.env.example` to `.env.local` and set the project URL and publishable
+   key. These `EXPO_PUBLIC_` values are included in the app bundle, so never put
+   a `service_role` or secret key there.
+4. Restart Expo with `npx expo start`.
+
+The start and stop locations are recorded only when the corresponding button is
+pressed; the app does not continuously track location.
+
 In the output, you'll find options to open the app in a
 
 - [development build](https://docs.expo.dev/develop/development-builds/introduction/)

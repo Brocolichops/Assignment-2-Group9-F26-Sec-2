@@ -81,6 +81,7 @@ export default function App() {
             user_id: userId,
             start_latitude: coords.latitude,
             start_longitude: coords.longitude,
+            start_utc_offset_minutes: -new Date().getTimezoneOffset(),
           })
           .select("id")
           .single();
@@ -105,6 +106,7 @@ export default function App() {
             stopped_at: new Date().toISOString(),
             stop_latitude: coords.latitude,
             stop_longitude: coords.longitude,
+            stop_utc_offset_minutes: -new Date().getTimezoneOffset(),
           })
           .eq("id", activeSessionId)
           .eq("user_id", userId)

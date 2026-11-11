@@ -23,14 +23,20 @@ the start and stop coordinates. Anonymous authentication keeps the app free of a
 sign-in screen while row-level security limits each installation to its own rows.
 
 1. In the Supabase Dashboard, enable anonymous sign-ins in the Auth settings.
-2. Open the SQL Editor and run [`supabase/schema.sql`](./supabase/schema.sql).
+2. Open the SQL Editor and run the contents of [`supabase/schema.sql`](./supabase/schema.sql).
+   If you already ran an earlier version, run the updated script again to add
+   the local-time offsets and readable view.
 3. Copy `.env.example` to `.env.local` and set the project URL and publishable
    key. These `EXPO_PUBLIC_` values are included in the app bundle, so never put
    a `service_role` or secret key there.
 4. Restart Expo with `npx expo start`.
 
 The start and stop locations are recorded only when the corresponding button is
-pressed; the app does not continuously track location.
+pressed; the app does not continuously track location. In Supabase Table Editor,
+open `driver_sessions_readable` to see start/end times formatted in the device's
+local time. The original `started_at` and `stopped_at` columns remain available
+as timestamps for sorting and calculations. Existing records without a stored
+offset are shown in UTC.
 
 In the output, you'll find options to open the app in a
 

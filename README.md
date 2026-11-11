@@ -38,6 +38,11 @@ local time. The original `started_at` and `stopped_at` columns remain available
 as timestamps for sorting and calculations. Existing records without a stored
 offset are shown in UTC.
 
+The History tab resolves trip coordinates to locality names on iOS and Android
+and caches successful lookups on the device. If a place name cannot be resolved,
+the coordinates remain visible as a fallback. Place-name lookup is not available
+in the web version.
+
 In the output, you'll find options to open the app in a
 
 - [development build](https://docs.expo.dev/develop/development-builds/introduction/)

@@ -1,5 +1,5 @@
 import { useFocusEffect } from "expo-router";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -8,11 +8,14 @@ import {
   StyleSheet,
   Text,
   View,
+  Platform,
 } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaView } from "react-native-safe-area-context";
+import * as Location from "expo-location";
 
 import { ensureAnonymousUser, supabase } from "@/lib/supabase";
+import { getPlaceName } from "@/lib/place-name";
 
 const PAGE_SIZE = 25;
 
@@ -28,6 +31,11 @@ type Trip = {
   stop_longitude: number | null;
 };
 
+type PlaceLookup = {
+  name: string | null;
+  status: "loading" | "resolved" | "unavailable";
+};
+
 export default function HistoryScreen() {
   const [trips, setTrips] = useState<Trip[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -40,6 +48,12 @@ export default function HistoryScreen() {
   const isRequestInFlight = useRef(false);
   const nextOffset = useRef(0);
   const hasMoreRef = useRef(true);
+  const placeLookupsInProgress = useRef(new Set<string>());
+  const placeLookupsCompleted = useRef(new Set<string>());
+  const isMounted = useRef(false);
+  const [placeLookups, setPlaceLookups] = useState<Record<string, PlaceLookup>>(
+    {},
+  );
 
   const loadPage = useCallback(async (reset = false) => {
     if (
@@ -114,6 +128,125 @@ export default function HistoryScreen() {
     }, [loadPage]),
   );
 
+  useEffect(() => {
+    isMounted.current = true;
+    return () => {
+      isMounted.current = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    const lookupTripPlaces = async () => {
+      if (Platform.OS === "web" || trips.length === 0) {
+        return;
+      }
+
+      if (Platform.OS === "android") {
+        let hasLocationPermission = false;
+        try {
+          const permission = await Location.getForegroundPermissionsAsync();
+          hasLocationPermission = permission.status === "granted";
+        } catch (error) {
+          console.warn("Unable to check location permission for place lookup:", error);
+        }
+
+        if (!hasLocationPermission) {
+          for (const trip of trips) {
+            for (const point of getTripPoints(trip)) {
+              const key = getPointKey(point.latitude, point.longitude);
+              if (!isMounted.current) {
+                return;
+              }
+              setPlaceLookups((current) => ({
+                ...current,
+                [key]: { name: null, status: "unavailable" },
+              }));
+            }
+          }
+          return;
+        }
+      }
+
+      for (const trip of trips) {
+        for (const point of getTripPoints(trip)) {
+          const key = getPointKey(point.latitude, point.longitude);
+          if (
+            !isMounted.current ||
+            placeLookupsInProgress.current.has(key) ||
+            placeLookupsCompleted.current.has(key)
+          ) {
+            continue;
+          }
+
+          placeLookupsInProgress.current.add(key);
+          setPlaceLookups((current) => ({
+            ...current,
+            [key]: { name: null, status: "loading" },
+          }));
+
+          try {
+            const name = await getPlaceName(point.latitude, point.longitude);
+            placeLookupsCompleted.current.add(key);
+            if (isMounted.current) {
+              setPlaceLookups((current) => ({
+                ...current,
+                [key]: {
+                  name,
+                  status: name ? "resolved" : "unavailable",
+                },
+              }));
+            }
+          } catch (error) {
+            console.warn("Unable to resolve a trip location to a place name:", error);
+            placeLookupsCompleted.current.add(key);
+            if (isMounted.current) {
+              setPlaceLookups((current) => ({
+                ...current,
+                [key]: { name: null, status: "unavailable" },
+              }));
+            }
+          } finally {
+            placeLookupsInProgress.current.delete(key);
+          }
+        }
+      }
+    };
+
+    void lookupTripPlaces();
+  }, [trips]);
+
+  const renderLocation = (latitude: number, longitude: number) => {
+    const lookup = placeLookups[getPointKey(latitude, longitude)];
+
+    if (lookup?.status === "resolved" && lookup.name) {
+      return <Text style={styles.placeName}>{lookup.name}</Text>;
+    }
+
+    if (Platform.OS === "web") {
+      return (
+        <Text style={styles.coordinates}>
+          Place names are unavailable on web ·{" "}
+          {formatCoordinates(latitude, longitude)}
+        </Text>
+      );
+    }
+
+    if (lookup?.status === "loading") {
+      return (
+        <View style={styles.placeLoading}>
+          <ActivityIndicator size="small" color={colors.camel} />
+          <Text style={styles.coordinates}>Finding nearby place…</Text>
+        </View>
+      );
+    }
+
+    return (
+      <Text style={styles.coordinates}>
+        Place name unavailable · {formatCoordinates(latitude, longitude)}
+      </Text>
+    );
+  };
+
   const renderTrip = ({ item, index }: { item: Trip; index: number }) => (
     <View style={styles.tripCard}>
       <View style={styles.tripHeader}>
@@ -134,9 +267,7 @@ export default function HistoryScreen() {
           <View style={styles.stop}>
             <Text style={styles.stopLabel}>STARTED</Text>
             <Text style={styles.stopTime}>{item.start_time}</Text>
-            <Text style={styles.coordinates}>
-              {formatCoordinates(item.start_latitude, item.start_longitude)}
-            </Text>
+            {renderLocation(item.start_latitude, item.start_longitude)}
           </View>
 
           <View style={styles.stop}>
@@ -146,12 +277,7 @@ export default function HistoryScreen() {
                 <Text style={styles.stopTime}>{item.end_time}</Text>
                 {item.stop_latitude !== null &&
                 item.stop_longitude !== null ? (
-                  <Text style={styles.coordinates}>
-                    {formatCoordinates(
-                      item.stop_latitude,
-                      item.stop_longitude,
-                    )}
-                  </Text>
+                  renderLocation(item.stop_latitude, item.stop_longitude)
                 ) : null}
               </>
             ) : (
@@ -241,6 +367,27 @@ export default function HistoryScreen() {
 
 function formatCoordinates(latitude: number, longitude: number): string {
   return `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
+}
+
+function getPointKey(latitude: number, longitude: number): string {
+  return `${latitude.toFixed(5)},${longitude.toFixed(5)}`;
+}
+
+function getTripPoints(
+  trip: Trip,
+): { latitude: number; longitude: number }[] {
+  const points = [
+    { latitude: trip.start_latitude, longitude: trip.start_longitude },
+  ];
+
+  if (trip.stop_latitude !== null && trip.stop_longitude !== null) {
+    points.push({
+      latitude: trip.stop_latitude,
+      longitude: trip.stop_longitude,
+    });
+  }
+
+  return points;
 }
 
 function getErrorMessage(error: unknown): string {
@@ -365,6 +512,16 @@ const styles = StyleSheet.create({
   coordinates: {
     color: colors.muted,
     fontSize: 12,
+  },
+  placeName: {
+    color: colors.text,
+    fontSize: 14,
+    fontWeight: "500",
+  },
+  placeLoading: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: 7,
   },
   pendingTime: {
     color: colors.camel,

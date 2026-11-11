@@ -8,7 +8,7 @@
     "scheme": "ishaan",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/expo.icon"
+    "icon": "./assets/images/icon.png"
     },
     "android": {
       "adaptiveIcon": {
@@ -42,7 +42,7 @@
     ],
     "experiments": {
       "typedRoutes": true,
-      "reactCompiler": true
+      "reactCompiler": false
     }
   }
 }
